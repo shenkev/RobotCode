@@ -2,6 +2,8 @@
 #include <LiquidCrystal.h>  		//***** from 253 template file
 #include <servo253.h>       		//***** from 253 template file 
 
+#include "drive.h"
+
   //global parameters
   
   //digital INs
@@ -27,11 +29,19 @@
   int rightWheelPin = 1  ;
   
   //logistics
-  int onPebbles = 0  ;
-  int grabbedIdol = 0  ;  //set when we grab the last artifact (idol)
-  int safeRun = 0  ;
+  boolean onPebbles = false  ;
+  boolean grabbedIdol = false  ;  //set when we grab the last artifact (idol)
+  boolean safeRun = false  ;
   int minIRReading = 100  ;
-  int offCliff = 0  ;
+  boolean offCliff = false  ;
+  int robotState = 0  ;
+  
+  const int stateTape = 0  ;
+  const int stateIR = 1  ;
+  const int stateZipline = 2  ;
+  const int stateCliff = 3  ;
+  const int stateEscape = 4  ;
+  const int stateReturnEarly = 5  ;
   
   //IR Detection
   int IRError = 0  ;
@@ -89,54 +99,81 @@ void setup()
 void loop() 
 {
   while ( !(startbutton()) ) ;
-  //assuming we don't have another main loop after using zipline
-  if ((onPebbles) && (grabbedIdol)) useZipline()  ;
   
-  //add case for picking up idol
+  boolean running = true  ;
   
-  if (digitalRead(cliffQRD)) avoidCliff()  ;
-  
-  //need to change this so we don't think we're stuck when
-  //we're purposely standing still
-  if (checkEncoders())
+  while (running)
   {
-    escape()  ;
-    //Using "continue" doesn't compile, probably going to have to rewrite main function
-    //I was trying to break out of the entire loop and go to the next iteration
-    //i.e. skip all function calls under this function
+    int lIR = analogRead(leftIRPin)  ;
+    int rIR = analogRead(rightIRPin)  ;
     
-    //continue  ;
-  }
-  int lIR = analogRead(leftIRPin)  ;
-  int rIR = analogRead(rightIRPin)  ;
-  if ((lIR>minIRReading) || (rIR>minIRReading))
-  {
-    if(!safeRun)
+    boolean checkState = true  ;
+    
+    while (checkState)
     {
-      followIR(lIR, rIR)  ;
-      //continue  ;
+      if ((onPebbles) && (grabbedIdol))
+      {
+        robotState = stateZipline  ;
+        break  ;
+      }
+      else if (digitalRead(cliffQRD))
+      {
+        robotState = stateCliff  ;
+        break  ;
+      }  
+      //need to change this so we don't think we're stuck when
+      //we're purposely standing still
+      else if (checkEncoders())
+      {
+        robotState = stateEscape  ;
+        break  ;
+      }
+      else if ((lIR>minIRReading) || (rIR>minIRReading))
+      {
+        if(!safeRun)
+        {
+          robotState = stateIR  ;
+          break  ;
+        }
+        else
+        {
+          robotState = stateReturnEarly  ;
+          break  ;
+        }
+      }
+      else
+      {
+        robotState = stateTape  ;
+      }
     }
-    else
+    
+    switch(robotState)
     {
-      //is this function necessary? If we do nothing, will robot
-      //turn 180 degrees and go back itself?
-      returnEarly()  ;
+      case stateZipline:
+        //assuming we don't have another while loop after using zipline
+        useZipline()  ;
+      //add case for picking up idol
+      case stateCliff:
+        avoidCliff()  ;
+        break  ;
+      case stateEscape:
+        escape()  ;
+        break  ;
+      case stateIR:
+         followIR(lIR, rIR)  ;
+         break  ;
+      case stateReturnEarly:
+         //is this function necessary? If we do nothing, will robot
+         //turn 180 degrees and go back itself?
+         returnEarly()  ;
+         break  ;
+      case stateTape:
+         int lTape = analogRead(leftTapePin)  ;
+         int rTape = analogRead(rightTapePin)  ;
+         followTape(lTape, rTape)  ;
+         break  ;
     }
   }
-  
-  int lTape = analogRead(leftTapePin)  ;
-  int rTape = analogRead(rightTapePin)  ;
-  followTape(lTape, rTape)  ;
-}
-
-//input: final motor output values
-//output: none
-//Driving function
-void drive(int lWheelSpeed, int rWheelSpeed, int activeWheelServoDir)
-{
-  motor.speed(leftWheelPin, lWheelSpeed)  ;
-  motor.speed(rightWheelPin, rWheelSpeed)  ;   
-  RCServo0.write(activeWheelServoDir)  ; 
 }
 
 //input:
