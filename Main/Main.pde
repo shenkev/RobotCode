@@ -2,8 +2,6 @@
 #include <LiquidCrystal.h>  		//***** from 253 template file
 #include <servo253.h>       		//***** from 253 template file 
 
-#include "drive.h"
-
   //global parameters
   
   //digital INs
@@ -78,6 +76,9 @@
   int kP = 200;
   int kI = 0;
   int kD = 0;
+
+//files need to be included after parameter declarations
+#include "drive.h"
   
 void setup() 
 {

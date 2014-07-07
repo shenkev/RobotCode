@@ -11,3 +11,5 @@ inline void drive(int lWheelSpeed, int rWheelSpeed, int activeWheelServoDir)
   motor.speed(rightWheelPin, rWheelSpeed)  ;   
   RCServo0.write(activeWheelServoDir)  ; 
 }
+
+#endif
