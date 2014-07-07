@@ -1,6 +1,9 @@
 #ifndef _DRIVE_H
 #define _DRIVE_H
 
+/**
+This is the function called to drive the wheels
+**/
 
 //input: final motor output values
 //output: none

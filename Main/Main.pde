@@ -76,10 +76,7 @@
   int kP = 200;
   int kI = 0;
   int kD = 0;
-
-//files need to be included after parameter declarations
-#include "drive.h"
-  
+ 
 void setup() 
 {
   
@@ -96,6 +93,21 @@ void setup()
 
 }
 
+//files need to be included after variable declarations so they
+//can access the variables
+#include "drive.h"
+#include "avoidCliff.h"
+#include "returnEarly.h"
+#include "useZipline.h"
+#include "checkEncoders.h"
+#include "escape.h"
+#include "followTape.h"
+//not sure if signalSmooth.h actually needs to be #included
+//in the main control file. It is only used by followIR.h
+#include "signalSmooth.h"
+#include "followIR.h"
+
+
 //main control loop
 void loop() 
 {
@@ -108,44 +120,39 @@ void loop()
     int lIR = analogRead(leftIRPin)  ;
     int rIR = analogRead(rightIRPin)  ;
     
-    boolean checkState = true  ;
-    
-    while (checkState)
+    if ((onPebbles) && (grabbedIdol))
     {
-      if ((onPebbles) && (grabbedIdol))
+      robotState = stateZipline  ;
+      break  ;
+    }
+    else if (digitalRead(cliffQRD))
+    {
+      robotState = stateCliff  ;
+      break  ;
+    }  
+    //need to change this so we don't think we're stuck when
+    //we're purposely standing still
+    else if (checkEncoders())
+    {
+      robotState = stateEscape  ;
+      break  ;
+    }
+    else if ((lIR>minIRReading) || (rIR>minIRReading))
+    {
+      if(!safeRun)
       {
-        robotState = stateZipline  ;
+        robotState = stateIR  ;
         break  ;
-      }
-      else if (digitalRead(cliffQRD))
-      {
-        robotState = stateCliff  ;
-        break  ;
-      }  
-      //need to change this so we don't think we're stuck when
-      //we're purposely standing still
-      else if (checkEncoders())
-      {
-        robotState = stateEscape  ;
-        break  ;
-      }
-      else if ((lIR>minIRReading) || (rIR>minIRReading))
-      {
-        if(!safeRun)
-        {
-          robotState = stateIR  ;
-          break  ;
-        }
-        else
-        {
-          robotState = stateReturnEarly  ;
-          break  ;
-        }
       }
       else
       {
-        robotState = stateTape  ;
+        robotState = stateReturnEarly  ;
+        break  ;
       }
+    }
+    else
+    {
+      robotState = stateTape  ;
     }
     
     switch(robotState)
@@ -169,161 +176,10 @@ void loop()
          returnEarly()  ;
          break  ;
       case stateTape:
-         int lTape = analogRead(leftTapePin)  ;
-         int rTape = analogRead(rightTapePin)  ;
-         followTape(lTape, rTape)  ;
+         int lTapeRaw = analogRead(leftTapePin)  ;
+         int rTapeRaw = analogRead(rightTapePin)  ;
+         followTape(lTapeRaw, rTapeRaw)  ;
          break  ;
     }
   }
 }
-
-//input:
-//output:
-//function calls:
-//purpose:
-void avoidCliff()
-{
-}
-
-//input:
-//output:
-//function calls:
-//purpose:
-void returnEarly()
-{
-}
-
-//input:
-//output:
-//function calls:
-//purpose:
-void useZipline()
-{
-}
-
-//input:
-//output:
-//function calls:
-//purpose:
-boolean checkEncoders()
-{
-  return 1  ;
-}
-
-//input:
-//output:
-//function calls:
-//purpose:
-void escape()
-{
-}
-
-//input: original tape readings from circuit
-//output: none
-//function calls: drive
-void followTape(int leftTapeReading, int rightTapeReading)
-{
-  if((leftTapeReading>threshold) && (rightTapeReading>threshold)) error = 0;
-  if((leftTapeReading>threshold) && (rightTapeReading<threshold)) error = -1;
-  //to the right
-  if((leftTapeReading<threshold) && (rightTapeReading>threshold)) error = 1;
-  //to the left
-  if((leftTapeReading<threshold)&&(rightTapeReading<threshold)) 
-  {
-    if(lastError>0) error = harshCorrectionCoe  ;
-    if(lastError<0) error = -1*harshCorrectionCoe  ;
-  }
-  if(!(error==lastError))
-  {
-   recErr=lastError  ;
-   lastError = error  ;
-   prevErrDuration = timeSinceDiffErr  ;
-   timeSinceDiffErr=1  ; 
-  }
-  pro = kP*error  ;
-  der = (int)((float)kD*(float)(error-recErr)/(float)(prevErrDuration+timeSinceDiffErr))  ;
-  con = pro + der  ;
-  int leftSpeed = mSpeed + con;
-  int rightSpeed = mSpeed - con;
-  
-  //debugging
-  if (debugc==30) 
-   { 
-   LCD.setCursor(0,0);  
-   LCD.clear();  LCD.home() ;
-   LCD.print(leftTapeReading);
-   LCD.print(" ");
-   LCD.print(rightTapeReading);//,left_sensor,kP,kD,p,d); 
-   LCD.print(" ");
-   LCD.print(kP);
-   LCD.print(" ");
-   LCD.print(kD);
-   LCD.print(" ");
-   LCD.print(leftSpeed);
-   LCD.setCursor(0,1);
-   LCD.print(rightSpeed);
-   LCD.print(" ");
-   LCD.print(error);
-   
-   kD = knob(knob_one);
-   kP = knob(knob_two);
-   debugc=0; 
-   }
-  timeSinceDiffErr = timeSinceDiffErr + 1  ;
-  debugc = debugc + 1  ;
-  //currently not using front wheel servo
-  drive(leftSpeed, rightSpeed, 0)  ;
-}
-
-//input: original IR signals from circuit
-//output: none
-//function calls: signalSmooth, drive
-//purpose: Analyzes IR signals and determines direction to drive
-void followIR(int leftIRInput, int rightIRInput)
-{
-  //SignalSmoothing
-  float lSmoothSignal = signalSmooth(leftIRInput)  ;
-  float rSmoothSignal = signalSmooth(rightIRInput)  ;
-  
-  //Account for circuit differences between left and right IR sensors
-  
-  //PID
-  //positive error means too far to the right
-  IRError = (int)(lSmoothSignal - rSmoothSignal)  ;
-  IRPro = IRkP * IRError  ;
-  //currently not dividing by any dt
-  IRDer = (int)((float)IRkD * (float)(IRError-IRLastErr))  ;
-  IRCon = IRPro + IRDer  ;
-  
-  int lWheelSpeed = IRmSpeed + IRCon  ;
-  int rWheelSpeed = IRmSpeed - IRCon  ;
-  int activeWheelDir  ;
-  
-  IRLastErr = IRError ;
-  drive(lWheelSpeed, rWheelSpeed, activeWheelDir)  ;  
-}
-
-//input: a single original IR signal from circuit
-//output: weighted average of input values
-//purpose: smooths the IR data using Gaussian smooth
-float signalSmooth(int originalSignal)
-{
-  int signalArray[7];
-  // 1 3 6 7 6 3 1 smooth
-  //increment old datapoints down array
-  for(int i = 0; i < 6; i++)
-  {
-    signalArray[i+1] = signalArray[i];
-  }
-  
-  // new data point
-  signalArray[0] = originalSignal  ;
-  
-  //there is a delay of 3 function calls since the newest
-  //measured point is given a weight of 1 then after 3 calculations
-  //the max weight of 7
-  
-  return (float)(1*signalArray[0] + 3*signalArray[1] 
-  + 6*signalArray[2] + 7*signalArray[3] + 6*signalArray[4] 
-  + 3*signalArray[5] + 1*signalArray[6])/(27.0)  ;
-} 
