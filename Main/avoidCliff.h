@@ -12,6 +12,9 @@ It should involve going in reverse for a period of time or simply stopping.
 //purpose:
 inline void avoidCliff()
 {
+	int reverseSpeed = -500  ;
+	int serDir = 90  ;
+	drive(reverseSpeed, reverseSpeed, serDir)  ;
 }
 
 #endif

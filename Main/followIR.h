@@ -15,6 +15,16 @@ This is the function called to follow IR. We need to tune PID parameters.
 //purpose: Analyzes IR signals and determines direction to drive
 inline void followIR(int leftIRRaw, int rightIRRaw)
 {
+  //IR Detection
+  int IRError = 0  ;
+  int IRLastErr = 0  ;
+  int IRPro = 0  ;
+  int IRDer = 0  ;
+  int IRServoDir = 90  ;
+  int IRkP = 0  ;
+  int IRkD = 0  ;
+  int IRmSpeed = 500  ;
+  
   //SignalSmoothing
   float lSmoothSignal = signalSmooth(leftIRRaw)  ;
   float rSmoothSignal = signalSmooth(rightIRRaw)  ;
@@ -27,14 +37,14 @@ inline void followIR(int leftIRRaw, int rightIRRaw)
   IRPro = IRkP * IRError  ;
   //currently not dividing by any dt
   IRDer = (int)((float)IRkD * (float)(IRError-IRLastErr))  ;
-  IRCon = IRPro + IRDer  ;
+  //servo output is between 0 and 180
+  IRServoDir = IRPro + IRDer + 90  ;
   
-  int lWheelSpeed = IRmSpeed + IRCon  ;
-  int rWheelSpeed = IRmSpeed - IRCon  ;
-  int activeWheelDir  ;
+  int lWheelSpeed = IRmSpeed  ;
+  int rWheelSpeed = IRmSpeed  ;
   
   IRLastErr = IRError ;
-  drive(lWheelSpeed, rWheelSpeed, activeWheelDir)  ;  
+  drive(lWheelSpeed, rWheelSpeed, IRServoDir)  ;  
 }
 
 #endif

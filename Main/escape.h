@@ -12,6 +12,9 @@ We may not do too much with this function since it may be better to just restart
 //purpose:
 inline void escape()
 {
+	int maxSpeed = 1023  ;
+	int serDir = 90  ;
+	drive(maxSpeed, maxSpeed, serDir)  ;
 }
 
 #endif
