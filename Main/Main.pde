@@ -11,13 +11,15 @@
   int encoder1 = 1  ;
   int encoder2 = 2  ;  
   int cliffQRD = 3  ;
-  int idolQRD = 4  ;
+  int retrievalEncoder = 4  ;
   
   //analog INs
   int leftIRPin = 0  ;
   int rightIRPin = 1  ;
   int leftTapePin = 2  ;
   int rightTapePin = 3  ;
+  int idolSensor = 4  ;
+  
   //zipline Arm Pots
   int arm1Pot = 4  ;
   int arm2Pot = 5  ;
@@ -36,6 +38,7 @@
   int minIRReading = 100  ;
   boolean offCliff = false  ;
   int robotState = 0  ;
+  int idolThreshold = 250  ;
   
   const int stateTape = 0  ;
   const int stateIR = 1  ;
@@ -118,7 +121,7 @@ void loop()
         robotState = stateReturnEarly  ;
       }
     }
-    else if (digitalRead(idolQRD))
+    else if (analogRead(idolSensor)>idolThreshold)
     {
       robotState = stateIdol  ;
     }

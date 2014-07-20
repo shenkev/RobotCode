@@ -19,43 +19,83 @@
 //purpose:
 inline void extractArtifact()
 {
+	//physical parameters
+    float spoolCircumference = 25.5  ;
+	float gearCircumference = 40.0  ;
+	float encoderCircumference = 20.0  ;
+	float constant = 24.0*(gearCircumference/(spoolCircumference*encoderCircumference))  ;
+	/**the logic is as follows
+		I. The spool needs to travel distance/spoolCircumference number of revolutions
+		II. This number of revolutions makes the gear travel gearCircumference*revolutions distance
+		III. This gear distance is equal to the encoder's gear distance. Which means the encoder travels distance/encoderCircumference
+			 number of revolutions
+		IV. There are 24 flips of voltages in each encoder revolution.
+	**/
+	
+	//lifting parameters
 	int dropSpeed	= 500  ;
 	int liftSpeed = -500  ;
 	int x0 = 0  ;
 	int binPosition = 90  ;
+	int timeDelay = 50  ;
 	
-	//can either use an encoder to keep track of how much line we let out or just guess.
-	//currently implemented as guessing
+
+	//distance parameters
+	float dropD = 100  ;
+	float peelD = 200 ;
+	
 	/**
 		1.
 	**/
-	int maxTime = 500  ;
-	int timeInterval = 10  ;
-	for (int time=0; time<maxTime; time=time+timeInterval)
+	int flips = (int)(dropD*constant)  ;
+	int counter = 0  ;
+	int oldState = 0  ;
+	int currentState = 0  ;
+	while (counter<flips)
 	{
 		motor.speed(idolMotor, dropSpeed)  ;
-		delay(timeInterval)  ;
+		currentState = digitalRead(retrievalEncoder)  ;
+		if( !(oldState == currentState))
+		{
+	      counter = counter + 1  ;
+		}
+		delay(timeDelay)  ;
 	}
 	/**
 		2.
+		same drop distance
+		same number of flips
 	**/
-	for (int time=0; time<maxTime; time=time+timeInterval)
+	counter = 0  ;
+    while (counter<flips)
 	{
 		motor.speed(idolMotor, liftSpeed)  ;
-		delay(timeInterval)  ;
+		currentState = digitalRead(retrievalEncoder)  ;
+		if( !(oldState == currentState))
+		{
+	      counter = counter + 1  ;
+		}
+		delay(timeDelay)  ;
 	}
 	/**
 		3.
 	**/
 	RCServo1.write(binPosition)  ; 
+	
     /**
 		4.
 	**/
-	int maxTime2 = 200  ;
-	for (int time=0; time<maxTime2; time=time+timeInterval)
+	int peelFlips = (int)(peelD * constant)  ;
+	counter = 0  ;
+    while (counter<peelFlips)
 	{
 		motor.speed(idolMotor, liftSpeed)  ;
-		delay(timeInterval)  ;
+		currentState = digitalRead(retrievalEncoder)  ;
+		if( !(oldState == currentState))
+		{
+	      counter = counter + 1  ;
+		}		
+		delay(timeDelay)  ;
 	}
     /**
 		5.
@@ -64,10 +104,16 @@ inline void extractArtifact()
 	/**
 		6.
 	**/
-	for (int time=0; time<maxTime2; time=time+timeInterval)
+	counter = 0  ;
+    while (counter<peelFlips)
 	{
 		motor.speed(idolMotor, dropSpeed)  ;
-		delay(timeInterval)  ;
+		currentState = digitalRead(retrievalEncoder)  ;
+		if( !(oldState == currentState))
+		{
+	      counter = counter + 1  ;
+		}
+		delay(timeDelay)  ;		
 	}
 }
 
