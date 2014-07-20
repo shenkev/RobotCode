@@ -25,10 +25,14 @@ int kD = 20;
 //correction errors
 int error = 0;
 int lasterror = 1;
+int recerror = 0;
+int preverrorDuration = 0;
+int timeSinceDiffErr = 1;
 int PIDAdjustment = 0;
 
 //wheel controll
 int motorSpeed = 500;
+int sharpTurnSpeed = 100;
 int neutral = 90;
 int servoPosition = 90;
 
@@ -38,7 +42,7 @@ int counter = 1;
 
 void setup() 
 {
-  //to prevend fuse from blowing
+  //to prevent fuse from blowing
   motor.speed(leftWheelPin, 0)  ;
   motor.speed(rightWheelPin, 0)  ;
   
@@ -126,8 +130,6 @@ void setup()
 
 void loop() 
 {
-   motor.speed(rightWheelPin, motorSpeed)  ;
-   motor.speed(leftWheelPin, motorSpeed)  ;
    followTape();
    LCD.setCursor(0,0);  LCD.clear();  LCD.home() ;
    LCD.print("leftQRD");
@@ -161,13 +163,37 @@ void followTape()
       error = 5;
   }
   if (lasterror != error)
-      lasterror = error;
-  PIDAdjustment = (int)((float)kP * (float)error) + (int)((float)kD * (float)(error - lasterror));
+  {
+    recerror = lasterror; 
+    lasterror = error;   
+    preverrorDuration = timeSinceDiffErr;
+    timeSinceDiffErr = 1;
+  }
+  PIDAdjustment = (int)((float)kP * (float)error) + (int)((float)kD * (float)(error - recerror) / (float)(preverrorDuration + timeSinceDiffErr) );
   servoPosition = neutral+PIDAdjustment;
   if (servoPosition>180)
     servoPosition = 180;
   if (servoPosition<0)
     servoPosition = 0;
+  timeSinceDiffErr = timeSinceDiffErr + 1;
+  //actuate
+  if (error == 5)
+  {
+    motor.speed(leftWheelPin, sharpTurnSpeed)  ;  
+  }
+  else
+  {
+    motor.speed(leftWheelPin, motorSpeed)  ;      
+  }
+  if (error == -5)
+  {
+    motor.speed(rightWheelPin, sharpTurnSpeed)  ;    
+  }
+  else
+  {
+    motor.speed(rightWheelPin, motorSpeed)  ;    
+  }
+  
   RCServo1.write(servoPosition); 
 }
 
